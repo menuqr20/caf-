@@ -21,6 +21,7 @@ export default function App() {
     <div className="app">
       <header className="testata">
         <div>
+          <p className="data-oggi">{new Date().toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</p>
           <h1>Appuntamenti</h1>
           <p className="sotto">{NOME_CAF}</p>
         </div>
