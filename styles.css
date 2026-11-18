@@ -300,3 +300,31 @@ button.link.pericolo { color: var(--pericolo); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Smartphone e app installata */
+html { -webkit-text-size-adjust: 100%; }
+body { overscroll-behavior-y: none; -webkit-tap-highlight-color: transparent; }
+button, a, select, input, label { touch-action: manipulation; }
+.app { padding-top: calc(1rem + env(safe-area-inset-top)); }
+.login { padding-top: calc(1rem + env(safe-area-inset-top)); padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+
+@media (max-width: 700px) {
+  .app { padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); }
+  .schede {
+    position: fixed;
+    z-index: 10;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(0.6rem + env(safe-area-inset-bottom));
+    margin: 0;
+    box-shadow: 0 10px 30px -8px rgba(11, 61, 82, 0.45), 0 0 0 1px var(--linea);
+  }
+  .schede button { min-height: 3.2rem; }
+  .icona { width: 3.4rem; height: 3.4rem; }
+  .riga-azioni select, .riga-azioni a.whatsapp, button.primario, button.secondario { min-height: 3.2rem; }
+  button.link { padding: 0.7rem 0.4rem; }
+}
+
+@media (display-mode: standalone) {
+  .testata button.link { padding: 0.7rem 0.4rem; }
+}
