@@ -29,7 +29,7 @@ export default function App() {
         </button>
       </header>
 
-      <nav className="schede" aria-label="Sezioni">
+      <nav className="schede" data-pagina={pagina} aria-label="Sezioni">
         <button
           className={pagina === 'agenda' ? 'attiva' : ''}
           onClick={() => setPagina('agenda')}
