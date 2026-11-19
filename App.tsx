@@ -8,6 +8,11 @@ import Prestazioni from './Prestazioni.jsx'
 import SuperAdmin from './SuperAdmin.tsx'
 import Impostazioni from './Impostazioni.tsx'
 
+function saluto() {
+  const h = new Date().getHours()
+  return h < 13 ? 'Buongiorno' : h < 18 ? 'Buon pomeriggio' : 'Buonasera'
+}
+
 export default function App() {
   const [sessione, setSessione] = useState(undefined)
   const [licenza, setLicenza] = useState(undefined)
@@ -54,7 +59,7 @@ export default function App() {
       <header className="testata">
         <div>
           <p className="data-oggi">{new Date().toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</p>
-          <h1>{admin ? 'Gestionale' : 'Appuntamenti'}</h1>
+          <h1>{admin ? 'Gestionale' : saluto()}</h1>
           <p className="sotto">
             {admin ? 'Super admin' : nomeCaf}
             {!admin && licenza.scade_il && ` · attivo fino al ${new Date(licenza.scade_il).toLocaleDateString('it-IT')}`}
