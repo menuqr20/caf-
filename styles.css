@@ -284,6 +284,15 @@ button.secondario.scelto { box-shadow: inset 0 0 0 2px var(--indaco); color: var
 .licenza .dati { gap: 0.15rem; word-break: break-all; }
 .schede button { font-size: 0.92rem; }
 
+/* Contatore visite */
+.statistiche { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: 0.6rem; }
+.statistiche div { display: flex; flex-direction: column; padding: 0.7rem 0.8rem; border-radius: 16px; background: rgba(79, 63, 240, 0.08); }
+.statistiche strong { font-family: var(--display); font-size: 1.7rem; line-height: 1.1; }
+.statistiche span { color: var(--tenue); font-size: 0.85rem; }
+.barre { display: flex; align-items: flex-end; gap: 4px; height: 5rem; margin-top: 0.4rem; }
+.barra { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.barra i { display: block; width: 100%; min-height: 3px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, #7a5cff, var(--indaco)); }
+
 @keyframes aurora { from { background-position: 0% 0%, 100% 100%, 100% 0%, 0 0; } to { background-position: 100% 100%, 0% 0%, 0% 100%, 0 0; } }
 @keyframes entra { from { opacity: 0; transform: translateY(18px) scale(0.98); } to { opacity: 1; transform: none; } }
 @keyframes pulsa { 50% { opacity: 0.4; } }

@@ -31,6 +31,8 @@ export default function SuperAdmin() {
   const [codici, setCodici] = useState([])
   const [ultimo, setUltimo] = useState(null)
   const [copiato, setCopiato] = useState('')
+  const [visite, setVisite] = useState(null)
+  const [visiteNonPronte, setVisiteNonPronte] = useState(false)
 
   async function caricaClienti() {
     const { data: righe, error } = await supabase.rpc('elenco_clienti')
@@ -42,8 +44,13 @@ export default function SuperAdmin() {
     if (error) setErrore('Non riesco a caricare i codici.')
     else setCodici(righe)
   }
+  async function caricaVisite() {
+    const { data: r, error } = await supabase.rpc('statistiche_visite')
+    if (error) setVisiteNonPronte(true)
+    else { setVisite(r); setVisiteNonPronte(false) }
+  }
   async function ricarica() {
-    await Promise.all([caricaClienti(), caricaCodici()])
+    await Promise.all([caricaClienti(), caricaCodici(), caricaVisite()])
   }
   useEffect(() => { ricarica() }, [])
 
@@ -104,6 +111,34 @@ export default function SuperAdmin() {
     <section>
       {errore && <p className="errore" role="alert">{errore}</p>}
       {esito && <p className="esito" role="status">{esito}</p>}
+
+      <h2 className="titolo-sezione">Visite al sito</h2>
+      {visiteNonPronte && (
+        <p className="guida">Contatore non ancora attivo: esegui il file <code>supabase-visite.sql</code> nel SQL Editor di Supabase.</p>
+      )}
+      {visite && (
+        <div className="modulo">
+          <div className="statistiche">
+            <div><strong>{visite.oggi}</strong><span>Oggi</span></div>
+            <div><strong>{visite.ultimi_7}</strong><span>Ultimi 7 giorni</span></div>
+            <div><strong>{visite.ultimi_30}</strong><span>Ultimi 30 giorni</span></div>
+            <div><strong>{visite.totale}</strong><span>Totale visite</span></div>
+            <div><strong>{visite.visitatori}</strong><span>Visitatori diversi</span></div>
+          </div>
+          <div className="barre" aria-label="Visite degli ultimi 14 giorni">
+            {visite.giorni.map((g) => {
+              const max = Math.max(1, ...visite.giorni.map((x) => x.visite))
+              return (
+                <div key={g.giorno} className="barra" title={`${data(g.giorno)}: ${g.visite}`}>
+                  <i style={{ height: `${(g.visite / max) * 100}%` }} />
+                </div>
+              )
+            })}
+          </div>
+          <p className="sotto">Una visita = una volta che qualcuno apre il sito (conteggiata una volta per sessione del browser).</p>
+          <button type="button" className="link" onClick={caricaVisite}>Aggiorna</button>
+        </div>
+      )}
 
       <h2 className="titolo-sezione">Clienti</h2>
       <div className="modulo">

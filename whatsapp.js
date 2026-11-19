@@ -1,5 +1,3 @@
-import { NOME_CAF } from './supabase.js'
-
 // Porta il numero nel formato richiesto da wa.me (solo cifre, con prefisso).
 export function normalizzaTelefono(tel) {
   const grezzo = tel.trim()
@@ -25,7 +23,7 @@ export function formattaOra(iso) {
   })
 }
 
-export function creaMessaggio(app, prestazione) {
+export function creaMessaggio(app, prestazione, nomeCaf) {
   const documenti = (prestazione?.documenti || []).map((d) => `- ${d}`).join('\n')
   const blocco = documenti
     ? `Documenti da portare:\n${documenti}\n\n`
@@ -36,11 +34,11 @@ export function creaMessaggio(app, prestazione) {
     `${formattaData(app.data_ora)} alle ${formattaOra(app.data_ora)}.\n\n` +
     blocco +
     `Se non può venire, la preghiamo di avvisarci.\n` +
-    `A presto, ${NOME_CAF}`
+    `A presto, ${nomeCaf}`
   )
 }
 
-export function linkWhatsApp(app, prestazione) {
-  const testo = encodeURIComponent(creaMessaggio(app, prestazione))
+export function linkWhatsApp(app, prestazione, nomeCaf) {
+  const testo = encodeURIComponent(creaMessaggio(app, prestazione, nomeCaf))
   return `https://wa.me/${normalizzaTelefono(app.telefono)}?text=${testo}`
 }

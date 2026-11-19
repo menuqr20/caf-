@@ -7,7 +7,12 @@ da portare e pannello per gestire prestazioni e documenti.
 - Backend: Supabase (login operatori, database)
 
 Il file `.env` contiene URL e chiave pubblica del progetto Supabase.
-Il nome mostrato nei messaggi si cambia con `VITE_NOME_CAF`.
+Ogni operatore sceglie il nome del proprio CAF in registrazione (modificabile da "Il mio CAF"):
+compare nel messaggio WhatsApp. `VITE_NOME_CAF` resta solo come nome di riserva.
+
+## Contatore visite
+
+Esegui `supabase-visite.sql` nel SQL Editor di Supabase. Le visite si vedono solo nel pannello super admin.
 
 ## Licenze e codici di attivazione
 

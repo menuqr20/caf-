@@ -5,6 +5,7 @@ export default function Login() {
   const [modo, setModo] = useState('accedi') // accedi | registra | recupero
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [nomeCaf, setNomeCaf] = useState('')
   const [errore, setErrore] = useState('')
   const [info, setInfo] = useState('')
   const [invio, setInvio] = useState(false)
@@ -27,7 +28,11 @@ export default function Login() {
       if (error) setErrore('Non sono riuscito a inviare l’email. Riprova tra qualche minuto.')
       else setInfo('Se l’indirizzo è registrato, riceverai un’email con il link per scegliere una nuova password.')
     } else if (modo === 'registra') {
-      const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { nome_caf: nomeCaf.trim() } },
+      })
       if (error) setErrore('Registrazione non riuscita: ' + error.message)
       else if (!data.session) {
         setInfo('Ti abbiamo inviato un’email: aprila e conferma l’indirizzo, poi accedi.')
@@ -47,7 +52,7 @@ export default function Login() {
     <div className="login">
       <form onSubmit={invia} className="scheda-login">
         <h1>{titolo}</h1>
-        <p className="sotto">{NOME_CAF}</p>
+        {modo !== 'registra' && <p className="sotto">{NOME_CAF}</p>}
         {modo === 'recupero' && (
           <p className="sotto">Scrivi la tua email: ti mandiamo un link per scegliere una nuova password.</p>
         )}
@@ -74,7 +79,19 @@ export default function Login() {
             />
           </label>
         )}
-        {modo === 'registra' && <p className="sotto">Almeno 8 caratteri. Dopo la registrazione ti servirà il codice di attivazione.</p>}
+        {modo === 'registra' && (
+          <label>
+            Nome del tuo CAF
+            <input
+              value={nomeCaf}
+              onChange={(e) => setNomeCaf(e.target.value)}
+              placeholder="es. CAF Rossi"
+              maxLength={60}
+              required
+            />
+          </label>
+        )}
+        {modo === 'registra' && <p className="sotto">Il nome comparirà nei messaggi WhatsApp ai tuoi clienti. Almeno 8 caratteri. Dopo la registrazione ti servirà il codice di attivazione.</p>}
         {errore && <p className="errore" role="alert">{errore}</p>}
         {info && <p className="esito" role="status">{info}</p>}
         <button className="primario" disabled={invio}>

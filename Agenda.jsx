@@ -21,7 +21,7 @@ function spostaGiorno(data, delta) {
 
 const FORM_VUOTO = { nome: '', cognome: '', telefono: '', prestazione_id: '', ora: '09:00', note: '' }
 
-export default function Agenda() {
+export default function Agenda({ nomeCaf }) {
   const [giorno, setGiorno] = useState(oggi())
   const [appuntamenti, setAppuntamenti] = useState([])
   const [prestazioni, setPrestazioni] = useState([])
@@ -226,7 +226,7 @@ export default function Agenda() {
                   </select>
                   <a
                     className="whatsapp"
-                    href={linkWhatsApp(a, prest)}
+                    href={linkWhatsApp(a, prest, nomeCaf)}
                     target="_blank"
                     rel="noreferrer"
                   >
