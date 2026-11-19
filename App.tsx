@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase, NOME_CAF } from './supabase.js'
-import Login from './Login.jsx'
-import Licenza from './Licenza.jsx'
+import Login from './Login.tsx'
+import Licenza from './Licenza.tsx'
 import Agenda from './Agenda.jsx'
 import Prestazioni from './Prestazioni.jsx'
-import SuperAdmin from './SuperAdmin.jsx'
+import SuperAdmin from './SuperAdmin.tsx'
+
 
 export default function App() {
   const [sessione, setSessione] = useState(undefined)
