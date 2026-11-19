@@ -37,6 +37,10 @@ export default function Agenda({ nomeCaf }) {
   const [aperto, setAperto] = useState(false)
   const [errore, setErrore] = useState('')
   const [salvataggio, setSalvataggio] = useState(false)
+  const [domani, setDomani] = useState([])
+  const [inviati, setInviati] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('promemoria_inviati') || '[]') } catch { return [] }
+  })
 
   const lunedi = inizioSettimana(giorno)
 
@@ -61,6 +65,21 @@ export default function Agenda({ nomeCaf }) {
       .then(({ data }) => setPrestazioni(data || []))
   }, [])
 
+  const caricaDomani = useCallback(async () => {
+    const d = spostaGiorno(oggi(), 1)
+    const { data } = await supabase
+      .from('appuntamenti')
+      .select('*')
+      .gte('data_ora', new Date(`${d}T00:00`).toISOString())
+      .lt('data_ora', new Date(`${spostaGiorno(d, 1)}T00:00`).toISOString())
+      .order('data_ora')
+    setDomani(data || [])
+  }, [])
+
+  useEffect(() => {
+    caricaDomani()
+  }, [caricaDomani])
+
   useEffect(() => {
     carica()
   }, [carica])
@@ -76,6 +95,20 @@ export default function Agenda({ nomeCaf }) {
   const perGiorno = (g) => settimana.filter((a) => a.stato !== 'annullato' && fmt(new Date(a.data_ora)) === g).length
   const attive = prestazioni.filter((p) => p.attiva)
   const perId = Object.fromEntries(prestazioni.map((p) => [p.id, p]))
+
+  const daAvvisare = domani.filter((a) => a.stato === 'fissato')
+  const mancanti = daAvvisare.filter((a) => !inviati.includes(a.id))
+
+  function segnaInviato(id) {
+    const nuovi = [...inviati, id].slice(-300)
+    setInviati(nuovi)
+    try { localStorage.setItem('promemoria_inviati', JSON.stringify(nuovi)) } catch { /* storage bloccato */ }
+  }
+
+  function avvisa(a) {
+    window.open(linkWhatsApp(a, perId[a.prestazione_id], nomeCaf), '_blank', 'noopener')
+    segnaInviato(a.id)
+  }
 
   function cambia(campo, valore) {
     setForm((f) => ({ ...f, [campo]: valore }))
@@ -147,6 +180,40 @@ export default function Agenda({ nomeCaf }) {
         )}
         {attivi.length === 0 && <p className="prossimo">Giornata libera: nessun appuntamento fissato.</p>}
       </div>
+
+      {daAvvisare.length > 0 && (
+        <div className="promemoria">
+          <div className="promemoria-testa">
+            <div>
+              <h2>Promemoria di domani</h2>
+              <p className="esito">
+                {mancanti.length === 0
+                  ? 'Hai avvisato tutti ✓'
+                  : `${mancanti.length} da avvisare su ${daAvvisare.length}`}
+              </p>
+            </div>
+            {mancanti.length > 0 && (
+              <button className="primario" onClick={() => avvisa(mancanti[0])}>
+                Avvisa il prossimo
+              </button>
+            )}
+          </div>
+          <ul className="promemoria-lista">
+            {daAvvisare.map((a) => (
+              <li key={a.id}>
+                <span>
+                  <b>{formattaOra(a.data_ora)}</b> {a.nome} {a.cognome}
+                </span>
+                {inviati.includes(a.id) ? (
+                  <button className="link" onClick={() => avvisa(a)}>✓ Inviato · rimanda</button>
+                ) : (
+                  <button className="link" onClick={() => avvisa(a)}>Invia</button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="settimana">
         <button className="icona piccola" onClick={() => setGiorno(spostaGiorno(giorno, -7))} aria-label="Settimana precedente">‹</button>

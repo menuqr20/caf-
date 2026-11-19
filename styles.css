@@ -327,3 +327,11 @@ button.secondario.scelto { box-shadow: inset 0 0 0 2px var(--indaco); color: var
 .cella.scelto small, .cella.scelto b, .cella.scelto em { color: #fff; }
 .sotto-settimana { display: flex; justify-content: space-between; align-items: center; margin: 0.6rem 0.2rem 0.2rem; }
 .titolo-giorno { font-family: var(--display); font-weight: 700; font-size: 1.15rem; text-transform: capitalize; }
+
+/* Promemoria di domani */
+.promemoria { margin: 0 0 1rem; padding: 1rem 1.2rem; background: var(--card); border-radius: 26px; box-shadow: inset 0 5px 0 var(--menta), var(--ombra); }
+.promemoria-testa { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+.promemoria-testa button.primario { min-height: 2.8rem; }
+.promemoria-lista { list-style: none; margin: 0.7rem 0 0; padding: 0; }
+.promemoria-lista li { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.15rem 0; border-top: 1px solid var(--linea); font-size: 0.95rem; }
+.promemoria-lista button.link { padding: 0.5rem 0.2rem; white-space: nowrap; }
