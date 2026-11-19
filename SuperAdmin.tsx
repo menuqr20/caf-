@@ -2,76 +2,170 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
 
 const DURATE = [7, 14, 30, 90, 365]
+const data = (d) => new Date(d).toLocaleDateString('it-IT')
 
-function stato(l) {
+function statoCliente(c) {
+  if (!c.scade_il) return { testo: 'Mai attivato', classe: 'attesa' }
+  const scade = new Date(c.scade_il)
+  const giorni = Math.ceil((scade - new Date()) / 86400000)
+  if (giorni > 0) return { testo: `Attivo fino al ${data(scade)} (${giorni} ${giorni === 1 ? 'giorno' : 'giorni'})`, classe: 'attivo' }
+  return { testo: `Scaduto il ${data(scade)}`, classe: 'scaduto' }
+}
+
+function statoCodice(l) {
   if (!l.riscattato_il) return { testo: 'Non ancora usato', classe: 'attesa' }
   const scade = new Date(l.scade_il)
-  if (scade > new Date()) return { testo: `Attivo fino al ${scade.toLocaleDateString('it-IT')}`, classe: 'attivo' }
-  return { testo: `Scaduto il ${scade.toLocaleDateString('it-IT')}`, classe: 'scaduto' }
+  if (scade > new Date()) return { testo: `Attivo fino al ${data(scade)}`, classe: 'attivo' }
+  return { testo: `Scaduto il ${data(scade)}`, classe: 'scaduto' }
 }
 
 export default function SuperAdmin() {
-  const [email, setEmail] = useState('')
+  const [clienti, setClienti] = useState([])
+  const [scelto, setScelto] = useState('')
   const [giorni, setGiorni] = useState(30)
-  const [elenco, setElenco] = useState([])
-  const [ultimo, setUltimo] = useState(null)
+  const [esito, setEsito] = useState('')
   const [errore, setErrore] = useState('')
+
+  const [email, setEmail] = useState('')
+  const [giorniCodice, setGiorniCodice] = useState(30)
+  const [codici, setCodici] = useState([])
+  const [ultimo, setUltimo] = useState(null)
   const [copiato, setCopiato] = useState('')
 
-  async function carica() {
-    const { data, error } = await supabase.rpc('elenco_licenze')
-    if (error) setErrore('Non riesco a caricare i codici.')
-    else setElenco(data)
+  async function caricaClienti() {
+    const { data: righe, error } = await supabase.rpc('elenco_clienti')
+    if (error) setErrore('Non riesco a caricare i clienti.')
+    else setClienti(righe.filter((c) => !c.super_admin))
   }
-  useEffect(() => { carica() }, [])
+  async function caricaCodici() {
+    const { data: righe, error } = await supabase.rpc('elenco_licenze')
+    if (error) setErrore('Non riesco a caricare i codici.')
+    else setCodici(righe)
+  }
+  async function ricarica() {
+    await Promise.all([caricaClienti(), caricaCodici()])
+  }
+  useEffect(() => { ricarica() }, [])
+
+  const cliente = clienti.find((c) => c.user_id === scelto)
+
+  async function imposta(aggiungi, n = Number(giorni)) {
+    setErrore(''); setEsito('')
+    const { data: scade, error } = await supabase.rpc('imposta_licenza', {
+      p_user_id: scelto, p_giorni: n, p_aggiungi: aggiungi,
+    })
+    if (error) { setErrore('Operazione non riuscita: ' + error.message); return }
+    setEsito(n === 0 && !aggiungi ? 'Accesso bloccato.' : `Fatto: ora è attivo fino al ${data(scade)}.`)
+    ricarica()
+  }
+
+  async function blocca() {
+    if (!confirm(`Bloccare subito l’accesso a ${cliente.email}?`)) return
+    imposta(false, 0)
+  }
+
+  async function elimina() {
+    if (!confirm(`Eliminare il profilo di ${cliente.email}? L’account sparisce e non si può annullare.`)) return
+    setErrore(''); setEsito('')
+    const { error } = await supabase.rpc('elimina_utente', { p_user_id: scelto })
+    if (error) { setErrore('Eliminazione non riuscita: ' + error.message); return }
+    setScelto('')
+    setEsito('Profilo eliminato.')
+    ricarica()
+  }
 
   async function genera(e) {
     e.preventDefault()
     setErrore('')
-    const { data, error } = await supabase.rpc('genera_codice', { p_email: email, p_giorni: Number(giorni) })
+    const { data: codice, error } = await supabase.rpc('genera_codice', { p_email: email, p_giorni: Number(giorniCodice) })
     if (error) { setErrore('Codice non generato: ' + error.message); return }
-    setUltimo({ email: email.trim().toLowerCase(), codice: data, giorni: Number(giorni) })
+    setUltimo({ email: email.trim().toLowerCase(), codice, giorni: Number(giorniCodice) })
     setEmail('')
-    carica()
+    caricaCodici()
   }
 
   async function copia(testo) {
     try { await navigator.clipboard.writeText(testo); setCopiato(testo); setTimeout(() => setCopiato(''), 1800) } catch { /* ignora */ }
   }
 
-  async function revoca(l) {
-    if (!confirm(`Revocare l\u2019accesso a ${l.email}? L\u2019app si bloccherà subito.`)) return
-    const { error } = await supabase.rpc('revoca_accesso', { p_user_id: l.user_id })
-    if (error) setErrore('Revoca non riuscita.'); else carica()
-  }
-
-  async function elimina(l) {
+  async function eliminaCodice(l) {
     if (!confirm('Eliminare questo codice mai usato?')) return
     const { error } = await supabase.rpc('elimina_codice', { p_id: l.id })
-    if (error) setErrore('Eliminazione non riuscita.'); else carica()
+    if (error) setErrore('Eliminazione non riuscita.'); else caricaCodici()
   }
 
   const messaggio = ultimo
-    ? `Ecco il tuo codice di attivazione: ${ultimo.codice}\nValido ${ultimo.giorni} giorni dal momento in cui lo inserisci. Registrati con l\u2019email ${ultimo.email}, poi inserisci il codice.`
+    ? `Ecco il tuo codice di attivazione: ${ultimo.codice}\nValido ${ultimo.giorni} giorni dal momento in cui lo inserisci. Registrati con l’email ${ultimo.email}, poi inserisci il codice.`
     : ''
+
+  const stato = cliente ? statoCliente(cliente) : null
 
   return (
     <section>
-      <p className="guida">Genera un codice per un’email: l’utente lo inserisce e l’app si sblocca per i giorni scelti.</p>
       {errore && <p className="errore" role="alert">{errore}</p>}
+      {esito && <p className="esito" role="status">{esito}</p>}
 
+      <h2 className="titolo-sezione">Clienti</h2>
+      <div className="modulo">
+        <label>
+          Scegli il cliente
+          <select value={scelto} onChange={(e) => { setScelto(e.target.value); setEsito(''); setErrore('') }}>
+            <option value="">— Scegli un cliente —</option>
+            {clienti.map((c) => (
+              <option key={c.user_id} value={c.user_id}>{c.email} · {statoCliente(c).classe === 'attivo' ? 'attivo' : statoCliente(c).classe === 'scaduto' ? 'scaduto' : 'da attivare'}</option>
+            ))}
+          </select>
+        </label>
+        {clienti.length === 0 && <p className="sotto">Nessun cliente registrato ancora.</p>}
+
+        {cliente && (
+          <>
+            <div className={'appuntamento licenza ' + stato.classe}>
+              <div className="dati">
+                <strong>{cliente.email}</strong>
+                <span className="tel">{stato.testo}</span>
+                <span className="nota">
+                  Registrato il {data(cliente.registrato_il)}
+                  {cliente.ultimo_accesso && ` · ultimo accesso ${data(cliente.ultimo_accesso)}`}
+                </span>
+              </div>
+            </div>
+
+            <label>
+              Giorni di licenza
+              <input type="number" min="0" max="3650" value={giorni} onChange={(e) => setGiorni(e.target.value)} />
+            </label>
+            <div className="azioni">
+              {DURATE.map((d) => (
+                <button type="button" key={d} className={'secondario piccolo' + (Number(giorni) === d ? ' scelto' : '')} onClick={() => setGiorni(d)}>
+                  {d} gg
+                </button>
+              ))}
+            </div>
+            <button className="primario" onClick={() => imposta(false)}>Imposta {giorni} giorni da oggi</button>
+            <button className="secondario" onClick={() => imposta(true)}>Aggiungi {giorni} giorni a quelli rimasti</button>
+            <div className="azioni">
+              <button className="link pericolo" onClick={blocca}>Blocca ora</button>
+              <button className="link pericolo" onClick={elimina}>Elimina profilo</button>
+            </div>
+          </>
+        )}
+      </div>
+
+      <h2 className="titolo-sezione">Codici di attivazione</h2>
+      <p className="guida">Alternativa: generi un codice per un’email e il cliente lo inserisce da solo.</p>
       <form className="modulo" onSubmit={genera}>
         <label>
-          Email dell’utente
+          Email del cliente
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         <label>
           Durata (giorni)
-          <input type="number" min="1" max="3650" value={giorni} onChange={(e) => setGiorni(e.target.value)} required />
+          <input type="number" min="1" max="3650" value={giorniCodice} onChange={(e) => setGiorniCodice(e.target.value)} required />
         </label>
         <div className="azioni">
           {DURATE.map((d) => (
-            <button type="button" key={d} className={'secondario piccolo' + (Number(giorni) === d ? ' scelto' : '')} onClick={() => setGiorni(d)}>
+            <button type="button" key={d} className={'secondario piccolo' + (Number(giorniCodice) === d ? ' scelto' : '')} onClick={() => setGiorniCodice(d)}>
               {d} gg
             </button>
           ))}
@@ -90,11 +184,9 @@ export default function SuperAdmin() {
         </div>
       )}
 
-      <h2 className="titolo-sezione">Codici generati</h2>
-      {elenco.length === 0 && <p className="vuoto">Nessun codice ancora.</p>}
       <ul className="elenco">
-        {elenco.map((l) => {
-          const s = stato(l)
+        {codici.map((l) => {
+          const s = statoCodice(l)
           return (
             <li key={l.id} className={'appuntamento licenza ' + s.classe}>
               <div className="dati">
@@ -104,14 +196,12 @@ export default function SuperAdmin() {
               </div>
               <div className="riga-azioni">
                 <button className="link" onClick={() => copia(l.codice)}>{copiato === l.codice ? 'Copiato ✓' : 'Copia'}</button>
-                {!l.riscattato_il && <button className="link pericolo" onClick={() => elimina(l)}>Elimina</button>}
-                {s.classe === 'attivo' && <button className="link pericolo" onClick={() => revoca(l)}>Revoca accesso</button>}
+                {!l.riscattato_il && <button className="link pericolo" onClick={() => eliminaCodice(l)}>Elimina</button>}
               </div>
             </li>
           )
         })}
       </ul>
-      <p className="nota-privacy">Per prolungare l’accesso genera un nuovo codice per la stessa email: i giorni si sommano.</p>
     </section>
   )
 }

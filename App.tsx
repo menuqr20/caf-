@@ -2,14 +2,15 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase, NOME_CAF } from './supabase.js'
 import Login from './Login.tsx'
 import Licenza from './Licenza.tsx'
+import NuovaPassword from './NuovaPassword.tsx'
 import Agenda from './Agenda.jsx'
 import Prestazioni from './Prestazioni.jsx'
 import SuperAdmin from './SuperAdmin.tsx'
 
-
 export default function App() {
   const [sessione, setSessione] = useState(undefined)
   const [licenza, setLicenza] = useState(undefined)
+  const [recupero, setRecupero] = useState(false)
   const [pagina, setPagina] = useState('agenda')
 
   const caricaLicenza = useCallback(async () => {
@@ -19,7 +20,10 @@ export default function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSessione(data.session))
-    const { data } = supabase.auth.onAuthStateChange((_evento, s) => setSessione(s))
+    const { data } = supabase.auth.onAuthStateChange((evento, s) => {
+      if (evento === 'PASSWORD_RECOVERY') setRecupero(true)
+      setSessione(s)
+    })
     return () => data.subscription.unsubscribe()
   }, [])
 
@@ -33,27 +37,23 @@ export default function App() {
     return () => { clearInterval(ogniMinuto); document.removeEventListener('visibilitychange', alRitorno) }
   }, [sessione, caricaLicenza])
 
+  if (recupero) return <NuovaPassword onFatto={() => setRecupero(false)} />
   if (sessione === undefined) return <p className="caricamento">Caricamento…</p>
   if (!sessione) return <Login />
   if (licenza === undefined) return <p className="caricamento">Caricamento…</p>
   if (!licenza.attiva) return <Licenza stato={licenza} onAttivata={caricaLicenza} />
 
-  const schede = [
-    ['agenda', 'Agenda'],
-    ['prestazioni', 'Prestazioni e documenti'],
-    ...(licenza.super_admin ? [['admin', 'Super admin']] : []),
-  ]
-  const indice = Math.max(0, schede.findIndex(([id]) => id === pagina))
+  const admin = licenza.super_admin
 
   return (
     <div className="app">
       <header className="testata">
         <div>
           <p className="data-oggi">{new Date().toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" })}</p>
-          <h1>Appuntamenti</h1>
+          <h1>{admin ? 'Gestionale' : 'Appuntamenti'}</h1>
           <p className="sotto">
-            {NOME_CAF}
-            {!licenza.super_admin && licenza.scade_il && ` · attivo fino al ${new Date(licenza.scade_il).toLocaleDateString('it-IT')}`}
+            {admin ? 'Super admin' : NOME_CAF}
+            {!admin && licenza.scade_il && ` · attivo fino al ${new Date(licenza.scade_il).toLocaleDateString('it-IT')}`}
           </p>
         </div>
         <button className="link" onClick={() => supabase.auth.signOut()}>
@@ -61,19 +61,17 @@ export default function App() {
         </button>
       </header>
 
-      <nav className="schede" style={{ '--n': schede.length, '--i': indice }} aria-label="Sezioni">
-        {schede.map(([id, nome]) => (
-          <button key={id} className={pagina === id ? 'attiva' : ''} onClick={() => setPagina(id)}>
-            {nome}
-          </button>
-        ))}
-      </nav>
-
-      <main>
-        {pagina === 'agenda' && <Agenda />}
-        {pagina === 'prestazioni' && <Prestazioni />}
-        {pagina === 'admin' && licenza.super_admin && <SuperAdmin />}
-      </main>
+      {admin ? (
+        <main><SuperAdmin /></main>
+      ) : (
+        <>
+          <nav className="schede" style={{ '--n': 2, '--i': pagina === 'agenda' ? 0 : 1 }} aria-label="Sezioni">
+            <button className={pagina === 'agenda' ? 'attiva' : ''} onClick={() => setPagina('agenda')}>Agenda</button>
+            <button className={pagina === 'prestazioni' ? 'attiva' : ''} onClick={() => setPagina('prestazioni')}>Prestazioni e documenti</button>
+          </nav>
+          <main>{pagina === 'agenda' ? <Agenda /> : <Prestazioni />}</main>
+        </>
+      )}
     </div>
   )
 }
